@@ -10,7 +10,8 @@ const getParamsFromRequest = (reqUrl) => {
 }
 
 const getLatestReleases = async () => {
-  const res = await fetch(`https://www.bigfinish.com/test123?pg=1&ps=16&sort=published~desc&state=released`)
+  console.info('boop')
+  const res = await fetch(`https://www.bigfinish.com/whats_new/`)
   if (res.status !== 200) {
     return {
       error: {
@@ -21,11 +22,13 @@ const getLatestReleases = async () => {
   const body = await res.text()
   // console.info(body)
   const doc = new DOMParser().parseFromString(body)
-  const releases = [...doc.querySelectorAll('#results .grid>div')].map(r => {
+  const releases = [...doc.querySelectorAll('.post-description .listing-block').filter(el => !el.innerHTML.includes('<span>Coming Soon</span>') && !el.innerHTML.includes('<span>Free</span>') && [...el.querySelectorAll('.product-current-price')].length > 0)]
+    .map(r => {
       return {
-        title: r.querySelector('.text-sm.font-black.pb-4.font-apertura.text-bf-white').innerText,
-        id: `https://www.bigfinish.com` + r.querySelector('a').getAttribute('href'),
-        link: `https://www.bigfinish.com` + r.querySelector('a').getAttribute('href'),
+        title: r.querySelector('img').getAttribute('title'),
+        id: `https://www.bigfinish.com` + r.querySelector('.title-link').getAttribute('href'),
+        link: `https://www.bigfinish.com` + r.querySelector('.title-link').getAttribute('href'),
+        description: [...r.querySelectorAll('p')][1].innerText,
         author: [
           {
             name: 'Big Finish Productions',
@@ -36,7 +39,7 @@ const getLatestReleases = async () => {
         image: `https://www.bigfinish.com` + r.querySelector('img').getAttribute('src')
       }
     })
-  // console.info(JSON.stringify(releases, null, 2))
+  console.info(JSON.stringify(releases, null, 2))
   // console.log(doc)
 
   return {
@@ -84,6 +87,7 @@ const postToItemMetadata = (post) => {
 
 export default async (request, context) => {
   const { feedType } = getParamsFromRequest(request.url)
+  console.info('woo')
   let { error, releases } = await getLatestReleases()
   if (error) {
     return new Response(`Error`, {
@@ -110,19 +114,19 @@ export default async (request, context) => {
     updated: new Date(),
   });
 
-  // feed.addItem({
-  //   title: 'Big Finish Releases Placeholder Item',
-  //   id: `https://bigfinish.enchanting.dev/latestreleases`,
-  //   link: `https://bigfinish.enchanting.dev/latestreleases`,
-  //   description: 'This is a placeholder item so that the feed is never empty',
-  //   author: [
-  //     {
-  //       name: 'Big Finish Productions',
-  //       link: `https://www.bigfinish.com`
-  //     },
-  //   ],
-  //   date: new Date(),
-  // })
+  feed.addItem({
+    title: 'Big Finish Releases Placeholder Item',
+    id: `https://bigfinish.enchanting.dev/latestreleases`,
+    link: `https://bigfinish.enchanting.dev/latestreleases`,
+    description: 'This is a placeholder item so that the feed is never empty',
+    author: [
+      {
+        name: 'Big Finish Productions',
+        link: `https://www.bigfinish.com`
+      },
+    ],
+    date: new Date(),
+  })
 
   for (const release of releases) {
     feed.addItem({
